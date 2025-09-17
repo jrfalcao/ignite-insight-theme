@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Menu, X, Search, BookOpen } from 'lucide-react';
+import { Menu, X, Search, BookOpen, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Link } from 'react-router-dom';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,7 +43,7 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Search & Mobile Menu */}
+          {/* Search & Actions */}
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
@@ -51,6 +52,13 @@ const Header = () => {
               className="hidden sm:inline-flex"
             >
               <Search className="w-4 h-4" />
+            </Button>
+            
+            <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+              <Link to="/auth">
+                <User className="w-4 h-4 mr-2" />
+                Admin
+              </Link>
             </Button>
             
             {/* Mobile menu button */}
@@ -97,7 +105,14 @@ const Header = () => {
                 </a>
               ))}
             </nav>
-            <div className="mt-4 pt-4 border-t">
+            <div className="mt-4 pt-4 border-t space-y-4">
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/auth">
+                  <User className="w-4 h-4 mr-2" />
+                  Área Administrativa
+                </Link>
+              </Button>
+              
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
