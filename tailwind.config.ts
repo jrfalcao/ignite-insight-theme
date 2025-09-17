@@ -57,6 +57,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Blog category colors
+        news: "hsl(var(--news-accent))",
+        motivation: "hsl(var(--motivation-accent))",
+        curiosity: "hsl(var(--curiosity-accent))",
       },
       borderRadius: {
         lg: "var(--radius)",
