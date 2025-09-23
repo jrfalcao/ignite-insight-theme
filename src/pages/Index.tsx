@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
 import ArticleCard from '@/components/ArticleCard';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import images
 import heroMeditation from '@/assets/hero-meditation.jpg';
@@ -12,61 +14,89 @@ import scienceCuriosity from '@/assets/science-curiosity.jpg';
 import morningRoutine from '@/assets/morning-routine.jpg';
 import techInnovation from '@/assets/tech-innovation.jpg';
 
-const Index = () => {
-  const featuredArticles = [
-    {
-      title: "Revolução da Inteligência Artificial: Impactos na Economia Global",
-      excerpt: "Como a IA está transformando setores inteiros e criando novas oportunidades de negócio. Análise completa dos principais desenvolvimentos e tendências para 2024.",
-      author: "Carlos Mendes",
-      readTime: "12 min",
-      category: "news" as const,
-      image: techInnovation,
-      featured: true
-    },
-    {
-      title: "5 Hábitos Matinais que Transformaram Minha Vida",
-      excerpt: "Descubra como pequenas mudanças na sua rotina matinal podem gerar grandes transformações pessoais e profissionais.",
-      author: "Ana Silva",
-      readTime: "6 min",
-      category: "motivation" as const,
-      image: morningRoutine
-    }
-  ];
+interface Post {
+  id: string;
+  title: string;
+  excerpt: string;
+  slug: string;
+  featured: boolean;
+  created_at: string;
+  categories?: {
+    name: string;
+    type: string;
+    color: string;
+  } | null;
+  profiles?: {
+    display_name: string;
+  } | null;
+}
 
-  const recentArticles = [
-    {
-      title: "O Mistério dos Buracos Negros Supermassivos",
-      excerpt: "Novas descobertas científicas revelam segredos fascinantes sobre os gigantes do universo e como eles moldam galáxias inteiras.",
-      author: "Dr. Pedro Santos",
-      readTime: "8 min",
-      category: "curiosity" as const,
-      image: scienceCuriosity
-    },
-    {
-      title: "Liderança Inspiradora: Como Motivar Sua Equipe",
-      excerpt: "Estratégias práticas para desenvolver habilidades de liderança e criar um ambiente de trabalho mais produtivo e positivo.",
-      author: "Mariana Costa",
-      readTime: "10 min",
-      category: "motivation" as const,
-      image: mountainSuccess
-    },
-    {
-      title: "Mercado de Ações: Análise Semanal e Perspectivas",
-      excerpt: "Resumo dos principais movimentos do mercado financeiro e análise das tendências que podem influenciar os próximos meses.",
-      author: "Roberto Lima",
-      readTime: "15 min",
-      category: "news" as const,
-      image: businessNews
-    },
-    {
-      title: "Mindfulness no Trabalho: Produtividade com Bem-estar",
-      excerpt: "Como incorporar práticas de atenção plena no ambiente profissional para reduzir stress e aumentar a criatividade.",
-      author: "Juliana Reis",
-      readTime: "7 min",
-      category: "motivation" as const,
-      image: heroMeditation
+const Index = () => {
+  const [featuredArticles, setFeaturedArticles] = useState<Post[]>([]);
+  const [recentArticles, setRecentArticles] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Image mapping based on category type
+  const getImageByCategory = (categoryType: string) => {
+    switch (categoryType) {
+      case 'noticias':
+        return techInnovation;
+      case 'motivacional':
+        return morningRoutine;
+      case 'curiosidades':
+        return scienceCuriosity;
+      default:
+        return heroMeditation;
     }
-  ];
+  };
+
+  const getCategoryDisplay = (categoryType: string) => {
+    switch (categoryType) {
+      case 'noticias':
+        return 'news';
+      case 'motivacional':
+        return 'motivation';
+      case 'curiosidades':
+        return 'curiosity';
+      default:
+        return 'news';
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          title,
+          excerpt,
+          slug,
+          featured,
+          created_at,
+          categories (name, type, color),
+          profiles (display_name)
+        `)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const featured = posts?.filter(post => post.featured) || [];
+      const recent = posts?.filter(post => !post.featured).slice(0, 4) || [];
+
+      setFeaturedArticles(featured as any);
+      setRecentArticles(recent as any);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,9 +119,31 @@ const Index = () => {
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {featuredArticles.map((article, index) => (
-                  <ArticleCard key={index} {...article} />
-                ))}
+                {loading ? (
+                  Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="animate-pulse">
+                      <div className="bg-muted rounded-xl h-48 mb-4"></div>
+                      <div className="space-y-2">
+                        <div className="bg-muted h-4 rounded w-3/4"></div>
+                        <div className="bg-muted h-4 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  featuredArticles.map((post) => (
+                    <ArticleCard 
+                      key={post.id}
+                      title={post.title}
+                      excerpt={post.excerpt || ''}
+                      author={post.profiles?.display_name || 'Autor'}
+                      readTime="5 min"
+                      category={getCategoryDisplay(post.categories?.type) as any}
+                      image={getImageByCategory(post.categories?.type)}
+                      featured={post.featured}
+                      slug={post.slug}
+                    />
+                  ))
+                )}
               </div>
             </section>
 
@@ -116,9 +168,30 @@ const Index = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {recentArticles.map((article, index) => (
-                  <ArticleCard key={index} {...article} />
-                ))}
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="animate-pulse">
+                      <div className="bg-muted rounded-xl h-48 mb-4"></div>
+                      <div className="space-y-2">
+                        <div className="bg-muted h-4 rounded w-3/4"></div>
+                        <div className="bg-muted h-4 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  recentArticles.map((post) => (
+                    <ArticleCard 
+                      key={post.id}
+                      title={post.title}
+                      excerpt={post.excerpt || ''}
+                      author={post.profiles?.display_name || 'Autor'}
+                      readTime="5 min"
+                      category={getCategoryDisplay(post.categories?.type) as any}
+                      image={getImageByCategory(post.categories?.type)}
+                      slug={post.slug}
+                    />
+                  ))
+                )}
               </div>
             </section>
 

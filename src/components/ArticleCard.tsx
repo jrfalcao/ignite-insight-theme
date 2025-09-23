@@ -1,6 +1,7 @@
-import { Clock, User, ArrowRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Clock, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface ArticleCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface ArticleCardProps {
   category: 'news' | 'motivation' | 'curiosity';
   image: string;
   featured?: boolean;
+  slug?: string;
 }
 
 const categoryConfig = {
@@ -37,7 +39,8 @@ const ArticleCard = ({
   readTime, 
   category, 
   image, 
-  featured = false 
+  featured = false,
+  slug 
 }: ArticleCardProps) => {
   const config = categoryConfig[category];
   
@@ -90,9 +93,11 @@ const ArticleCard = ({
               </div>
             </div>
             
-            <Button variant="ghost" size="sm" className="group-hover:text-primary transition-smooth">
-              Ler mais
-              <ArrowRight className="ml-2 w-4 h-4 transition-smooth group-hover:translate-x-1" />
+            <Button variant="ghost" size="sm" className="group-hover:text-primary transition-smooth" asChild>
+              <Link to={slug ? `/post/${slug}` : '#'}>
+                Ler mais
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </Button>
           </div>
         </div>

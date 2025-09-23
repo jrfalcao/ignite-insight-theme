@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,9 @@ interface Post {
   id: string;
   title: string;
   excerpt?: string;
+  slug: string;
   status: 'draft' | 'published' | 'archived';
+  featured: boolean;
   created_at: string;
   updated_at: string;
   categories: {
@@ -52,7 +54,9 @@ export default function Posts() {
         id,
         title,
         excerpt,
+        slug,
         status,
+        featured,
         created_at,
         updated_at,
         author_id,
@@ -95,6 +99,27 @@ export default function Posts() {
     }
 
     setFilteredPosts(filtered);
+  };
+
+  const toggleFeatured = async (postId: string, currentFeatured: boolean) => {
+    const { error } = await supabase
+      .from('posts')
+      .update({ featured: !currentFeatured })
+      .eq('id', postId);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar destaque",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: currentFeatured ? "Post removido dos destaques" : "Post adicionado aos destaques",
+        description: "As alterações foram salvas com sucesso."
+      });
+      fetchPosts();
+    }
   };
 
   const deletePost = async (postId: string) => {
@@ -206,6 +231,12 @@ export default function Posts() {
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-semibold text-lg">{post.title}</h3>
                     {getStatusBadge(post.status)}
+                    {post.featured && (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                        <Star className="w-3 h-3 mr-1 fill-current" />
+                        Destaque
+                      </Badge>
+                    )}
                   </div>
                   
                   {post.excerpt && (
@@ -236,9 +267,20 @@ export default function Posts() {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => toggleFeatured(post.id, post.featured)}
+                    className={post.featured ? "text-yellow-600 hover:text-yellow-700" : "text-muted-foreground hover:text-yellow-600"}
+                    title={post.featured ? "Remover dos destaques" : "Adicionar aos destaques"}
+                  >
+                    <Star className={`w-4 h-4 ${post.featured ? 'fill-current' : ''}`} />
+                  </Button>
                   {post.status === 'published' && (
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/post/${post.slug}`}>
+                        <Eye className="w-4 h-4" />
+                      </Link>
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" asChild>
