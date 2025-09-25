@@ -11,6 +11,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import Posts from "./pages/admin/Posts";
 import Categories from "./pages/admin/Categories";
 import Users from "./pages/admin/Users";
+import NewPost from "./pages/admin/NewPost"; // Importar NewPost
+import EditPost from "./pages/admin/EditPost"; // Importar EditPost
 import AdminLayout from "./components/AdminLayout";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="posts" element={<Posts />} />
+              <Route path="posts/new" element={<NewPost />} /> {/* Nova rota para criar post */}
+              <Route path="posts/edit/:id" element={<EditPost />} /> {/* Nova rota para editar post */}
               <Route path="categories" element={<Categories />} />
               <Route path="users" element={<Users />} />
             </Route>
@@ -42,3 +46,4 @@ const App = () => (
 );
 
 export default App;
+
