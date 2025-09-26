@@ -5,8 +5,8 @@ import ArticleCard from '@/components/ArticleCard';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input'; // Importar o componente Input
-import { Search as SearchIcon } from 'lucide-react'; // Importar o ícone de busca
+import { Input } from '@/components/ui/input';
+import { Search as SearchIcon } from 'lucide-react';
 
 // Import images
 import heroMeditation from '@/assets/hero-meditation.jpg';
@@ -34,12 +34,12 @@ interface Post {
 }
 
 const Index = () => {
+  const [allPosts, setAllPosts] = useState<Post[]>([]); // Armazena todos os posts para filtragem local
   const [featuredArticles, setFeaturedArticles] = useState<Post[]>([]);
   const [recentArticles, setRecentArticles] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(''); // Novo estado para o termo de busca
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Image mapping based on category type
   const getImageByCategory = (categoryType: string) => {
     switch (categoryType) {
       case 'noticias':
@@ -68,12 +68,16 @@ const Index = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [searchTerm]); // Adicionar searchTerm como dependência para refetch
+  }, []); // Carrega posts apenas uma vez na montagem
+
+  useEffect(() => {
+    filterAndSetPosts();
+  }, [allPosts, searchTerm]); // Filtra posts quando allPosts ou searchTerm mudam
 
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data: posts, error } = await supabase
         .from('posts')
         .select(`
           id,
@@ -88,25 +92,31 @@ const Index = () => {
         .eq('status', 'published')
         .order('created_at', { ascending: false });
 
-      // Adicionar filtro de busca se houver um searchTerm
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,excerpt.ilike.%${searchTerm}%`);
-      }
-
-      const { data: posts, error } = await query;
-
       if (error) throw error;
 
-      const featured = posts?.filter(post => post.featured) || [];
-      const recent = posts?.filter(post => !post.featured).slice(0, 4) || [];
-
-      setFeaturedArticles(featured as any);
-      setRecentArticles(recent as any);
+      setAllPosts(posts as any || []);
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterAndSetPosts = () => {
+    let filtered = allPosts;
+
+    if (searchTerm) {
+      filtered = allPosts.filter(post =>
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    const featured = filtered.filter(post => post.featured);
+    const recent = filtered.filter(post => !post.featured).slice(0, 4);
+
+    setFeaturedArticles(featured);
+    setRecentArticles(recent);
   };
 
   return (

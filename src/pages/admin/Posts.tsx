@@ -9,6 +9,7 @@ import { Plus, Search, Edit, Trash2, Eye, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce'; // Importar useDebounce
 
 interface Post {
   id: string;
@@ -30,20 +31,16 @@ interface Post {
 
 export default function Posts() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // Usar debounce
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const { userRole, user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchPosts();
-  }, []);
-
-  useEffect(() => {
-    filterPosts();
-  }, [posts, searchTerm, statusFilter]);
+  }, [debouncedSearchTerm, statusFilter]); // Refetch quando o termo de busca debounced ou o filtro de status mudam
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -65,6 +62,16 @@ export default function Posts() {
       `)
       .order('updated_at', { ascending: false });
 
+    // Filtrar por termo de busca
+    if (debouncedSearchTerm) {
+      query = query.or(`title.ilike.%${debouncedSearchTerm}%,excerpt.ilike.%${debouncedSearchTerm}%`);
+    }
+
+    // Filtrar por status
+    if (statusFilter !== 'all') {
+      query = query.eq('status', statusFilter);
+    }
+
     // Authors can only see their own posts
     if (userRole?.role === 'author') {
       query = query.eq('author_id', user?.id);
@@ -82,23 +89,6 @@ export default function Posts() {
       setPosts(data as any || []);
     }
     setLoading(false);
-  };
-
-  const filterPosts = () => {
-    let filtered = posts;
-
-    if (searchTerm) {
-      filtered = filtered.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(post => post.status === statusFilter);
-    }
-
-    setFilteredPosts(filtered);
   };
 
   const toggleFeatured = async (postId: string, currentFeatured: boolean) => {
@@ -223,7 +213,7 @@ export default function Posts() {
 
       {/* Posts List */}
       <div className="space-y-4">
-        {filteredPosts.map((post) => (
+        {posts.map((post) => (
           <Card key={post.id}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -302,17 +292,17 @@ export default function Posts() {
           </Card>
         ))}
         
-        {filteredPosts.length === 0 && (
+        {posts.length === 0 && (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== 'all' 
+                  {debouncedSearchTerm || statusFilter !== 'all' 
                     ? 'Nenhum post encontrado com os filtros aplicados.'
                     : 'Ainda não há posts. Que tal criar o primeiro?'
                   }
                 </p>
-                {!searchTerm && statusFilter === 'all' && (
+                {!debouncedSearchTerm && statusFilter === 'all' && (
                   <Button asChild className="mt-4">
                     <Link to="/admin/posts/new">
                       <Plus className="w-4 h-4 mr-2" />
@@ -328,3 +318,4 @@ export default function Posts() {
     </div>
   );
 }
+
