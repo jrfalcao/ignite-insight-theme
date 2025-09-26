@@ -5,6 +5,8 @@ import ArticleCard from '@/components/ArticleCard';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input'; // Importar o componente Input
+import { Search as SearchIcon } from 'lucide-react'; // Importar o ícone de busca
 
 // Import images
 import heroMeditation from '@/assets/hero-meditation.jpg';
@@ -35,6 +37,7 @@ const Index = () => {
   const [featuredArticles, setFeaturedArticles] = useState<Post[]>([]);
   const [recentArticles, setRecentArticles] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(''); // Novo estado para o termo de busca
 
   // Image mapping based on category type
   const getImageByCategory = (categoryType: string) => {
@@ -65,11 +68,12 @@ const Index = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [searchTerm]); // Adicionar searchTerm como dependência para refetch
 
   const fetchPosts = async () => {
+    setLoading(true);
     try {
-      const { data: posts, error } = await supabase
+      let query = supabase
         .from('posts')
         .select(`
           id,
@@ -83,6 +87,13 @@ const Index = () => {
         `)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
+
+      // Adicionar filtro de busca se houver um searchTerm
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,excerpt.ilike.%${searchTerm}%`);
+      }
+
+      const { data: posts, error } = await query;
 
       if (error) throw error;
 
@@ -111,6 +122,18 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
           {/* Articles Section */}
           <div className="lg:col-span-3 space-y-12">
+            {/* Search Input */}
+            <div className="relative mb-8">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Pesquisar artigos..."
+                className="pl-10 pr-4 py-2 rounded-full border-2 border-input focus:border-primary focus:ring-primary transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
             {/* Featured Articles */}
             <section>
               <div className="flex items-center justify-between mb-8">
@@ -247,3 +270,4 @@ const Index = () => {
 };
 
 export default Index;
+
